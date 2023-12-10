@@ -97,14 +97,14 @@ func CreateAvailableTime(payload schemas.AvailableTime, returnData Res, client m
 	if exist(payload) {
 		returnData.Message = "An identical available time already exist!"
 		returnData.Status = 409
-		PublishReturnMessage(returnData, "grp20/res/availabletime/create", client)
+		PublishReturnMessage(returnData, "grp20/res/availabletimes/create", client)
 		return false
 	}
 
 	if payload.Start_time > payload.End_time {
 		returnData.Message = "End time must be after the start time"
 		returnData.Status = 409
-		PublishReturnMessage(returnData, "grp20/res/availabletime/create", client)
+		PublishReturnMessage(returnData, "grp20/res/availabletimes/create", client)
 		return false
 	}
 
@@ -118,7 +118,7 @@ func CreateAvailableTime(payload schemas.AvailableTime, returnData Res, client m
 
 			returnData.Message = "An error occurred"
 			returnData.Status = 500
-			PublishReturnMessage(returnData, "grp20/res/availabletime/create", client)
+			PublishReturnMessage(returnData, "grp20/res/availabletimes/create", client)
 
 			return false
 		}
@@ -127,7 +127,7 @@ func CreateAvailableTime(payload schemas.AvailableTime, returnData Res, client m
 
 		returnData.Message = "Available time created"
 		returnData.Status = 201
-		PublishReturnMessage(returnData, "grp20/res/availabletime/create", client)
+		PublishReturnMessage(returnData, "grp20/res/availabletimes/create", client)
 
 		return true
 	} else {
