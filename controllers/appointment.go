@@ -21,7 +21,7 @@ func InitialiseAppointment(client mqtt.Client) {
 	tokenCancel := client.Subscribe("grp20/req/appointment/delete", byte(0), func(c mqtt.Client, m mqtt.Message) {
 
 		var payload schemas.Appointment
-        var returnData Res
+		var returnData Res
 		err1 := json.Unmarshal(m.Payload(), &payload)
 		err2 := json.Unmarshal(m.Payload(), &returnData)
 		if (err1 != nil) && (err2 != nil) {
@@ -38,7 +38,7 @@ func InitialiseAppointment(client mqtt.Client) {
 	tokenCreate := client.Subscribe("grp20/req/appointment/create", byte(0), func(c mqtt.Client, m mqtt.Message) {
 
 		var payload schemas.Appointment
-        var returnData Res
+		var returnData Res
 		err1 := json.Unmarshal(m.Payload(), &payload)
 		err2 := json.Unmarshal(m.Payload(), &returnData)
 		if (err1 != nil) && (err2 != nil) {
@@ -62,7 +62,7 @@ func InitialiseAppointment(client mqtt.Client) {
 			//send mqtt message 400 bad request
 			fmt.Printf("400 - Bad request")
 		} else {
-            go GetAllForUser(payload, returnData, client)
+			go GetAllForUser(payload, returnData, client)
 		}
 	})
 	if tokenGetAllForUser.Error() != nil {
@@ -72,7 +72,7 @@ func InitialiseAppointment(client mqtt.Client) {
 	tokenDelete := client.Subscribe("appointmentservice/internal/delete", byte(0), func(c mqtt.Client, m mqtt.Message) {
 
 		var payload schemas.Appointment
-        var returnData Res
+		var returnData Res
 
 		err1 := json.Unmarshal(m.Payload(), &payload)
 		err2 := json.Unmarshal(m.Payload(), &returnData)
@@ -101,108 +101,101 @@ func DeleteAppointment(id primitive.ObjectID, returnData Res, client mqtt.Client
 
 	if result.DeletedCount == 1 {
 
-        returnData.Message = "Appointment deleted"
-        returnData.Status = 200
+		returnData.Message = "Appointment deleted"
+		returnData.Status = 200
 
 	} else {
-        returnData.Message = "Appointment not found"
-        returnData.Status = 404
+		returnData.Message = "Appointment not found"
+		returnData.Status = 404
 	}
 
-    PublishReturnMessage(returnData, "grp20/res/dentist/delete", client)
+	PublishReturnMessage(returnData, "grp20/res/dentist/delete", client)
 
 	returnVal = true
 	return returnVal
 }
 
-func GetAllForUser(payload schemas.Appointment, returnData Res,client mqtt.Client) bool {
+func GetAllForUser(payload schemas.Appointment, returnData Res, client mqtt.Client) bool {
 
-    var filter bson.M
+	var filter bson.M
 	var timeslots []schemas.Appointment
 
-    var zeroID primitive.ObjectID
-
-    if payload.Dentist_id != zeroID {
-        filter = bson.M{"dentist_id": payload.Dentist_id}
-    } else if payload.Patient_id != zeroID {
-        filter = bson.M{"patient_id": payload.Patient_id}
-    } else {
-        returnData.Message = "Bad request"
-        returnData.Status = 400
-        PublishReturnMessage(returnData, "grp20/res/timeslots/get", client)
-        return false
-    }
+	var zeroID primitive.ObjectID
+	if payload.Dentist_id != zeroID {
+		filter = bson.M{"dentist_id": payload.Dentist_id}
+	} else if payload.Patient_id != zeroID {
+		filter = bson.M{"patient_id": payload.Patient_id}
+	} else {
+		returnData.Message = "Bad request"
+		returnData.Status = 400
+		PublishReturnMessage(returnData, "grp20/res/timeslots/get", client)
+		return false
+	}
 
 	col := getAppointmentCollection()
 
+	fmt.Println(filter)
 	cursor, err := col.Find(context.TODO(), filter)
 
 	if err != nil {
-        returnData.Message = "Error"
-        returnData.Status = 500
-        PublishReturnMessage(returnData, "grp20/res/timeslots/get", client)
-        return false
+		returnData.Message = "Error"
+		returnData.Status = 500
+		PublishReturnMessage(returnData, "grp20/res/timeslots/get", client)
+		return false
 	}
 
-	defer cursor.Close(context.TODO())
+	cursor.All(context.TODO(), &timeslots)
+	// defer cursor.Close(context.TODO())
 
+	// for cursor.Next(context.TODO()) {
+	// 	var appointment schemas.Appointment
 
-	for cursor.Next(context.TODO()) {
-		var appointment schemas.Appointment
+	// 	if err := cursor.Decode(&appointment); err != nil {
+	// 		returnData.Message = "Error"
+	// 		returnData.Status = 500
+	// 		PublishReturnMessage(returnData, "grp20/res/timeslots/get", client)
+	// 		return false
+	// 	}
 
-		if err := cursor.Decode(&appointment); err != nil {
-            returnData.Message = "Error"
-            returnData.Status = 500
-            PublishReturnMessage(returnData, "grp20/res/timeslots/get", client)
-            return false
-		}
-        
+	// 	timeslots = append(timeslots, appointment)
+	// }
 
-		timeslots = append(timeslots, appointment)
-	}
-    
-
-    col = getAvailableTimesCollection()
+	col = getAvailableTimesCollection()
 
 	cursor, err = col.Find(context.TODO(), filter)
 
 	if err != nil {
-        returnData.Message = "Error"
-        returnData.Status = 500
-        PublishReturnMessage(returnData, "grp20/res/timeslots/get", client)
-        return false
+		returnData.Message = "Error"
+		returnData.Status = 500
+		PublishReturnMessage(returnData, "grp20/res/timeslots/get", client)
+		return false
 	}
 
-	defer cursor.Close(context.TODO())
+	cursor.All(context.TODO(), &timeslots)
+	// defer cursor.Close(context.TODO())
 
+	// for cursor.Next(context.TODO()) {
+	// 	var availableTimes schemas.Appointment
 
-	for cursor.Next(context.TODO()) {
-		var availableTimes schemas.Appointment
+	// 	if err := cursor.Decode(&availableTimes); err != nil {
+	// 		returnData.Message = "Error"
+	// 		returnData.Status = 500
+	// 		PublishReturnMessage(returnData, "grp20/res/timeslots/get", client)
+	// 		return false
+	// 	}
 
-		if err := cursor.Decode(&availableTimes); err != nil {
-            returnData.Message = "Error"
-            returnData.Status = 500
-            PublishReturnMessage(returnData, "grp20/res/timeslots/get", client)
-            return false
-		}
-        
+	// 	timeslots = append(timeslots, availableTimes)
+	// }
 
-		timeslots = append(timeslots, availableTimes)
+	if timeslots == nil {
+		returnData.Status = 404
+		returnData.Message = "No timeslots found"
+	} else {
+		returnData.Status = 200
+		returnData.Appointments = &timeslots
 	}
 
-    if timeslots == nil {
-        returnData.Status = 404
-        returnData.Message = "No timeslots found"
-    } else{
-        returnData.Status = 200
-        returnData.Appointments = &timeslots
-    }
-
-
-
-
-    PublishReturnMessage(returnData, "grp20/res/timeslots/get", client)
-
+	PublishReturnMessage(returnData, "grp20/res/timeslots/get", client)
 
 	return true
 }
@@ -222,21 +215,21 @@ func CreateAppointment(payload schemas.Appointment, returnData Res, client mqtt.
 	col := getAppointmentCollection()
 
 	result, err := col.InsertOne(context.TODO(), payload)
-    payload.ID = result.InsertedID.(primitive.ObjectID)
+	payload.ID = result.InsertedID.(primitive.ObjectID)
 	_ = result
 
 	if err != nil {
-        returnData.Status = 500
-        returnData.Message = "Appointment could not be created"
-        PublishReturnMessage(returnData, "grp20/res/appointment/create", client)
+		returnData.Status = 500
+		returnData.Message = "Appointment could not be created"
+		PublishReturnMessage(returnData, "grp20/res/appointment/create", client)
 		return false
 	}
 
-    returnData.Message = "Appointment booked"
-    returnData.Status = 200
-    returnData.Appointment = &payload
+	returnData.Message = "Appointment booked"
+	returnData.Status = 200
+	returnData.Appointment = &payload
 
-    PublishReturnMessage(returnData, "grp20/res/appointment/create", client)
+	PublishReturnMessage(returnData, "grp20/res/appointment/create", client)
 	return true
 }
 
@@ -261,7 +254,7 @@ func CancelAppointment(id primitive.ObjectID, returnData Res, client mqtt.Client
 
 	if result.DeletedCount == 1 {
 
-        returnData.Status = 200
+		returnData.Status = 200
 
 		data.Decode(appointment)
 
@@ -277,23 +270,23 @@ func CancelAppointment(id primitive.ObjectID, returnData Res, client mqtt.Client
 			panic(err)
 		}
 
-        message := string(jsonData)
+		message := string(jsonData)
 
 		client.Publish("appointmentservice/internal/migrate", 0, false, message)
 
-        returnData.Message = "Appointment Canceled"
+		returnData.Message = "Appointment Canceled"
 
 		returnVal = true
 
 	} else {
 
-        returnData.Status = 404
-        returnData.Message = "Appointment not found"
+		returnData.Status = 404
+		returnData.Message = "Appointment not found"
 
 		returnVal = false
 	}
 
-    PublishReturnMessage(returnData, "grp20/res/appointment/delete", client)
+	PublishReturnMessage(returnData, "grp20/res/appointment/delete", client)
 	return returnVal
 }
 
