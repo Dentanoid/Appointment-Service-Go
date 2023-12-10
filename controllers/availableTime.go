@@ -125,7 +125,8 @@ func CreateAvailableTime(payload schemas.AvailableTime, returnData Res, client m
 
 		fmt.Printf("Registered availableTime with dentistID: %v \n", result.InsertedID)
 
-		returnData.Message = "Available time created"
+		// Returns the time slot ID
+		returnData.Message = result.InsertedID.(primitive.ObjectID).Hex()
 		returnData.Status = 201
 		PublishReturnMessage(returnData, "grp20/res/availabletimes/create", client)
 
