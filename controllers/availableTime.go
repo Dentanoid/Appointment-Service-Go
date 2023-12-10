@@ -216,7 +216,7 @@ func DeleteAvailableTime(ID primitive.ObjectID, returnData Res, client mqtt.Clie
 
 			returnData.Message = "Internal server error!"
 			returnData.Status = 500
-			PublishReturnMessage(returnData, "grp20/res/dentist/delete", client)
+			PublishReturnMessage(returnData, "grp20/res/availabletimes/delete", client)
 
 			return false
 		}
@@ -229,7 +229,7 @@ func DeleteAvailableTime(ID primitive.ObjectID, returnData Res, client mqtt.Clie
 
 		returnData.Message = "Available time deleted!"
 		returnData.Status = 200
-		PublishReturnMessage(returnData, "grp20/res/dentist/delete", client)
+		PublishReturnMessage(returnData, "grp20/res/availabletimes/delete", client)
 
 		return true
 
