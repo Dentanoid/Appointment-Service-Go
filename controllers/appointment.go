@@ -118,7 +118,8 @@ func DeleteAppointment(id primitive.ObjectID, returnData Res, client mqtt.Client
 func GetAllForUser(payload schemas.Appointment, returnData Res, client mqtt.Client) bool {
 
 	var filter bson.M
-	var timeslots []schemas.Appointment
+	timeslots := make([]schemas.AvailableTime, 0)
+	appointments := make([]schemas.Appointment, 0)
 
 	var zeroID primitive.ObjectID
 	if payload.Dentist_id != zeroID {
@@ -134,7 +135,6 @@ func GetAllForUser(payload schemas.Appointment, returnData Res, client mqtt.Clie
 
 	col := getAppointmentCollection()
 
-	fmt.Println(filter)
 	cursor, err := col.Find(context.TODO(), filter)
 
 	if err != nil {
@@ -144,7 +144,7 @@ func GetAllForUser(payload schemas.Appointment, returnData Res, client mqtt.Clie
 		return false
 	}
 
-	cursor.All(context.TODO(), &timeslots)
+	cursor.All(context.TODO(), &appointments)
 	// defer cursor.Close(context.TODO())
 
 	// for cursor.Next(context.TODO()) {
@@ -192,7 +192,8 @@ func GetAllForUser(payload schemas.Appointment, returnData Res, client mqtt.Clie
 		returnData.Message = "No timeslots found"
 	} else {
 		returnData.Status = 200
-		returnData.Appointments = &timeslots
+		returnData.Appointments = &appointments
+		returnData.AvailableTimes = &timeslots
 	}
 
 	PublishReturnMessage(returnData, "grp20/res/timeslots/get", client)
