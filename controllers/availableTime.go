@@ -46,7 +46,7 @@ func InitializeAvailableTimes(client mqtt.Client) {
 			returnData.Status = 400
 			PublishReturnMessage(returnData, "grp20/res/availabletimes/get", client)
 		} else {
-			go GetAllAvailableTimesWithDentistID(payload.Dentist_id, returnData, client)
+			go GetAllAvailableTimes(payload, returnData, client)
 		}
 	})
 
@@ -143,10 +143,22 @@ func CreateAvailableTime(payload schemas.AvailableTime, returnData Res, client m
 }
 
 // getAllInstancesWithDentistID retrieves all documents in a collection with a matching dentist_id
-func GetAllAvailableTimesWithDentistID(dentistID primitive.ObjectID, returnData Res, client mqtt.Client) bool {
+func GetAllAvailableTimes(payload schemas.AvailableTime, returnData Res, client mqtt.Client) bool {
 
+	var filter bson.D
 	col := getAvailableTimesCollection()
-	filter := bson.D{{Key: "dentist_id", Value: dentistID}}
+
+	var zeroID primitive.ObjectID
+	if payload.Dentist_id != zeroID {
+		filter = bson.D{{Key: "Dentist_id", Value: payload.Dentist_id}}
+	} else if payload.Clinic_id != zeroID {
+		filter = bson.D{{Key: "Clinic_id", Value: payload.Clinic_id}}
+	} else {
+		returnData.Message = "Bad request"
+		returnData.Status = 400
+		PublishReturnMessage(returnData, "grp20/res/availabletimes/get", client)
+		return false
+	}
 
 	cursor, err := col.Find(context.TODO(), filter)
 	if err != nil {
