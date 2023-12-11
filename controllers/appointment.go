@@ -220,9 +220,9 @@ func CreateAppointment(payload schemas.Appointment, returnData Res, client mqtt.
 	_ = result
 
 	if err != nil {
-		returnData.Status = 500
-		returnData.Message = "Appointment could not be created"
-		PublishReturnMessage(returnData, "grp20/res/appointment/create", client)
+        returnData.Status = 500
+        returnData.Message = "Appointment could not be created"
+        PublishReturnMessage(returnData, "grp20/res/availabletimes/book", client)
 		return false
 	}
 
@@ -230,7 +230,7 @@ func CreateAppointment(payload schemas.Appointment, returnData Res, client mqtt.
 	returnData.Status = 200
 	returnData.Appointment = &payload
 
-	PublishReturnMessage(returnData, "grp20/res/appointment/create", client)
+    PublishReturnMessage(returnData, "grp20/res/availabletimes/book", client)
 	return true
 }
 
