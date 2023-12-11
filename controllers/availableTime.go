@@ -129,6 +129,7 @@ func CreateAvailableTime(payload schemas.AvailableTime, returnData Res, client m
 		returnData.Message = result.InsertedID.(primitive.ObjectID).Hex()
 		returnData.Status = 201
 		PublishReturnMessage(returnData, "grp20/res/availabletimes/create", client)
+		PublishReturnMessage(returnData, "grp20/availabletimes/live/"+string(payload.Clinic_id.Hex()), client)
 
 		return true
 	} else {
@@ -136,7 +137,8 @@ func CreateAvailableTime(payload schemas.AvailableTime, returnData Res, client m
 			//Data not migrated successfully
 			return false
 		} else {
-			//Data migrated successfully
+			//Data migrated successfully, will get triggered when an patient cancels an appointment in appointment.go
+			PublishReturnMessage(returnData, "grp20/availabletimes/live/"+string(payload.Clinic_id.Hex()), client)
 			return true
 		}
 	}
