@@ -263,6 +263,7 @@ func CancelAppointment(id primitive.ObjectID, returnData Res, client mqtt.Client
 			Dentist_id: appointment.ID,
 			Start_time: appointment.Start_time,
 			End_time:   appointment.End_time,
+            Clinic_id: appointment.Clinic_id,
 		}
 
 		jsonData, err := json.Marshal(availableTime)
