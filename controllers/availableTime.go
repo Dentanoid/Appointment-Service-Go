@@ -251,6 +251,7 @@ func GetAllAvailableTimes(payload schemas.AvailableTime, returnData Res, client 
 	}
 
 	// Convert the responseMap to JSON
+    returnData.Status = 200
 	returnData.AvailableTimes = &availableTimes
 
 	PublishReturnMessage(returnData, "grp20/res/availabletimes/get", client)
