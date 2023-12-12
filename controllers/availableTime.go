@@ -61,7 +61,7 @@ func InitializeAvailableTimes(client mqtt.Client) {
 		panic(tokenCreate.Error())
 	}
 
-	tokenDelete := client.Subscribe("grp20/req/availabletimes/delete", byte(0), func(c mqtt.Client, m mqtt.Message) {
+	tokenDelete := client.Subscribe("grp20/req/timeslots/delete", byte(0), func(c mqtt.Client, m mqtt.Message) {
 		var payload schemas.AvailableTime
 		var returnData Res
 
@@ -70,7 +70,7 @@ func InitializeAvailableTimes(client mqtt.Client) {
 		if (err1 != nil) && (err2 != nil) {
 			returnData.Message = "Bad request"
 			returnData.Status = 400
-			PublishReturnMessage(returnData, "grp20/res/availabletimes/delete", client)
+			PublishReturnMessage(returnData, "grp20/res/timeslots/delete", client)
 		} else {
 			go DeleteAvailableTime(payload.ID, returnData, client)
 		}
@@ -104,14 +104,22 @@ func CreateAvailableTime(payload schemas.AvailableTime, returnData Res, client m
 	if exist(payload) {
 		returnData.Message = "An identical available time already exist!"
 		returnData.Status = 409
-		PublishReturnMessage(returnData, "grp20/res/availabletimes/create", client)
+		if internal {
+			PublishReturnMessage(returnData, "grp20/res/appointment/delete", client)
+		} else {
+			PublishReturnMessage(returnData, "grp20/res/availabletimes/create", client)
+		}
 		return false
 	}
 
 	if payload.Start_time > payload.End_time {
 		returnData.Message = "End time must be after the start time"
 		returnData.Status = 409
-		PublishReturnMessage(returnData, "grp20/res/availabletimes/create", client)
+		if internal {
+			PublishReturnMessage(returnData, "grp20/res/appointment/delete", client)
+		} else {
+			PublishReturnMessage(returnData, "grp20/res/availabletimes/create", client)
+		}
 		return false
 	}
 
@@ -133,7 +141,7 @@ func CreateAvailableTime(payload schemas.AvailableTime, returnData Res, client m
 		fmt.Printf("Registered availableTime with dentistID: %v \n", result.InsertedID)
 
 		// Returns the time slot ID
-		returnData.Message = result.InsertedID.(primitive.ObjectID).Hex()
+		returnData.Message = "A new available time has been created"
 		returnData.Status = 201
 		PublishReturnMessage(returnData, "grp20/res/availabletimes/create", client)
 		PublishReturnMessage(returnData, "grp20/availabletimes/live/"+string(payload.Clinic_id.Hex()), client)
@@ -145,6 +153,9 @@ func CreateAvailableTime(payload schemas.AvailableTime, returnData Res, client m
 			return false
 		} else {
 			//Data migrated successfully, will get triggered when an patient cancels an appointment in appointment.go
+			returnData.Message = "An appointment has been canceled"
+			returnData.Status = 201
+			PublishReturnMessage(returnData, "grp20/res/appointment/delete", client)
 			PublishReturnMessage(returnData, "grp20/availabletimes/live/"+string(payload.Clinic_id.Hex()), client)
 			return true
 		}
@@ -206,6 +217,8 @@ func GetAllAvailableTimes(payload schemas.AvailableTime, returnData Res, client 
 	}
 
 	// Convert the responseMap to JSON
+	returnData.Status = 200
+
 	returnData.AvailableTimes = &availableTimes
 
 	PublishReturnMessage(returnData, "grp20/res/availabletimes/get", client)
@@ -269,9 +282,9 @@ func GetClinicsAvailabletimes(payload DentistArray, returnData Res, client mqtt.
 func DeleteAvailableTime(ID primitive.ObjectID, returnData Res, client mqtt.Client) bool {
 
 	col := getAvailableTimesCollection()
+	fmt.Print(ID.Hex())
 	filter := bson.M{"_id": ID}
 	result, err := col.DeleteOne(context.TODO(), filter)
-	_ = result
 
 	if err != nil {
 		log.Fatal(err)
@@ -282,14 +295,14 @@ func DeleteAvailableTime(ID primitive.ObjectID, returnData Res, client mqtt.Clie
 		ID: ID,
 	}
 
-	if result.DeletedCount == 0 {
+	if result.DeletedCount != 1 {
 		document, err := json.Marshal(msg)
 
 		if err != nil {
 
 			returnData.Message = "Internal server error!"
 			returnData.Status = 500
-			PublishReturnMessage(returnData, "grp20/res/availabletimes/delete", client)
+			PublishReturnMessage(returnData, "grp20/res/timeslots/delete", client)
 
 			return false
 		}
@@ -302,7 +315,7 @@ func DeleteAvailableTime(ID primitive.ObjectID, returnData Res, client mqtt.Clie
 
 		returnData.Message = "Available time deleted!"
 		returnData.Status = 200
-		PublishReturnMessage(returnData, "grp20/res/availabletimes/delete", client)
+		PublishReturnMessage(returnData, "grp20/res/timeslots/delete", client)
 
 		return true
 
@@ -313,9 +326,9 @@ func exist(payload schemas.AvailableTime) bool {
 	col := getAvailableTimesCollection()
 
 	filter := bson.M{
-		"Dentist_id": payload.Dentist_id,
-		"Start_time": payload.Start_time,
-		"End_time":   payload.End_time,
+		"dentist_id": payload.Dentist_id,
+		"start_time": payload.Start_time,
+		"end_time":   payload.End_time,
 	}
 
 	count, err := col.CountDocuments(context.Background(), filter)
