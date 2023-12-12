@@ -46,7 +46,7 @@ func InitializeAvailableTimes(client mqtt.Client) {
 		err2 := json.Unmarshal(m.Payload(), &returnData)
 		err3 := json.Unmarshal(m.Payload(), &dentistArray)
 
-		if (err1 != nil) || (err2 != nil) || (err3 != nil) {
+		if ((err1 != nil) && (err3 != nil)) || (err2 != nil) {
 			returnData.Message = "Bad request"
 			returnData.Status = 400
 			PublishReturnMessage(returnData, "grp20/res/availabletimes/get", client)
@@ -213,50 +213,53 @@ func GetAllAvailableTimes(payload schemas.AvailableTime, returnData Res, client 
 	return true
 }
 
-// GetClinicsAvailabletimes retrieves all available times within the specified time range and matching clinic ID
+// getting all availabletimes based on an array of clinic_id and a time window consisting of start_time and end_time
 func GetClinicsAvailabletimes(payload DentistArray, returnData Res, client mqtt.Client) bool {
 	col := getAvailableTimesCollection()
 
-	// Define the filter based on the provided criteria
-	filter := bson.M{
-		"clinic_id":  bson.M{"$in": payload.Clinics},
-		"start_time": bson.M{"$gte": payload.Start_time},
-		"end_time":   bson.M{"$lte": payload.End_time},
-	}
-
-	cursor, err := col.Find(context.TODO(), filter)
-	if err != nil {
-		returnData.Message = "An error occurred"
-		returnData.Status = 500
-		PublishReturnMessage(returnData, "grp20/res/availabletimes/get", client)
-		return false
-	}
-
-	defer cursor.Close(context.TODO())
-
 	var availableTimes []schemas.AvailableTime
 
-	for cursor.Next(context.TODO()) {
-		var availableTime schemas.AvailableTime
-		if err := cursor.Decode(&availableTime); err != nil {
-			returnData.Message = "An error occurred while decoding results"
+	for _, clinicID := range payload.Clinics {
+		// Define the filter based on the provided criteria
+		filter := bson.M{
+			"clinic_id":  clinicID,
+			"start_time": bson.M{"$gte": payload.Start_time},
+			"end_time":   bson.M{"$lte": payload.End_time},
+		}
+
+		cursor, err := col.Find(context.TODO(), filter)
+		if err != nil {
+			returnData.Message = "An error occurred"
 			returnData.Status = 500
 			PublishReturnMessage(returnData, "grp20/res/availabletimes/get", client)
 			return false
 		}
-		availableTimes = append(availableTimes, availableTime)
-	}
 
-	if err := cursor.Err(); err != nil {
-		returnData.Message = "An error occurred"
-		returnData.Status = 500
-		PublishReturnMessage(returnData, "grp20/res/availabletimes/get", client)
-		return false
+		defer cursor.Close(context.TODO())
+
+		for cursor.Next(context.TODO()) {
+			var availableTime schemas.AvailableTime
+			if err := cursor.Decode(&availableTime); err != nil {
+				returnData.Message = "An error occurred while decoding results"
+				returnData.Status = 500
+				PublishReturnMessage(returnData, "grp20/res/availabletimes/get", client)
+				return false
+			}
+			availableTimes = append(availableTimes, availableTime)
+		}
+
+		if err := cursor.Err(); err != nil {
+			returnData.Message = "An error occurred"
+			returnData.Status = 500
+			PublishReturnMessage(returnData, "grp20/res/availabletimes/get", client)
+			return false
+		}
 	}
 
 	// Convert the responseMap to JSON
 	returnData.AvailableTimes = &availableTimes
-
+	returnData.Message = "Available times successfully fetched!"
+	returnData.Status = 200
 	PublishReturnMessage(returnData, "grp20/res/availabletimes/get", client)
 
 	return true
