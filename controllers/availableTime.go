@@ -38,15 +38,22 @@ func InitializeAvailableTimes(client mqtt.Client) {
 	tokenGet := client.Subscribe("grp20/req/availabletimes/get", byte(0), func(c mqtt.Client, m mqtt.Message) {
 		var payload schemas.AvailableTime
 		var returnData Res
+		var dentistArray DentistArray
+
+		var dateTime primitive.DateTime
 
 		err1 := json.Unmarshal(m.Payload(), &payload)
 		err2 := json.Unmarshal(m.Payload(), &returnData)
-		if (err1 != nil) && (err2 != nil) {
+		err3 := json.Unmarshal(m.Payload(), &dentistArray)
+
+		if (err1 != nil) || (err2 != nil) || (err3 != nil) {
 			returnData.Message = "Bad request"
 			returnData.Status = 400
 			PublishReturnMessage(returnData, "grp20/res/availabletimes/get", client)
-		} else {
+		} else if dentistArray.Start_time == dateTime {
 			go GetAllAvailableTimes(payload, returnData, client)
+		} else {
+			go GetClinicsAvailabletimes(dentistArray, returnData, client)
 		}
 	})
 
@@ -90,60 +97,6 @@ func InitializeAvailableTimes(client mqtt.Client) {
 		panic(tokenInternalMigrate.Error())
 	}
 
-    tokenBookAvailableTime := client.Subscribe("grp20/req/availabletimes/book", byte(0), func(c mqtt.Client, m mqtt.Message) {
-	    var payload schemas.Appointment
-        var returnData Res
-
-	    err1 := json.Unmarshal(m.Payload(), &payload)
-	    err2 := json.Unmarshal(m.Payload(), &returnData)
-	    if (err1 != nil) && (err2 != nil){
-	    	fmt.Printf("malformed payload!")
-	    } else {
-	    	go BookAvailableTime(payload, returnData, client)
-        }
-	})
-
-	if tokenBookAvailableTime.Error() != nil {
-		panic(tokenBookAvailableTime.Error())
-	}
-
-
-}
-
-func BookAvailableTime(payload schemas.Appointment, returnData Res, client mqtt.Client) bool{
-    var deletedTime schemas.AvailableTime
-
-    col := getAvailableTimesCollection()
-    filter := bson.M{"_id": payload.ID}  
-
-    err := col.FindOneAndDelete(context.TODO(), filter).Decode(&deletedTime)
-    if err != nil {
-    //TODO send error message
-        returnData.Status = 404
-        returnData.Message = "Time slot not found"
-        PublishReturnMessage(returnData, "grp20/res/availabletimes/book", client)
-        return false
-    }
-
-    
-    deletedTimeJson, err1 := json.Marshal(deletedTime)
-
-    err2 := json.Unmarshal(deletedTimeJson, &payload)
-
-    if (err1 != nil) || (err2 != nil) {
-        //TODO send mqtt error
-    }
-
-    var zeroObjectID primitive.ObjectID
-    payload.ID = zeroObjectID
-
-    //Reinsert if creation of appointment is unsuccessfull
-    if !CreateAppointment(payload, returnData, client) {
-        result, err := col.InsertOne(context.TODO(), deletedTime) 
-        _ = result
-        return err == nil 
-    }
-    return true
 }
 
 func CreateAvailableTime(payload schemas.AvailableTime, returnData Res, client mqtt.Client, internal bool) bool {
@@ -183,6 +136,7 @@ func CreateAvailableTime(payload schemas.AvailableTime, returnData Res, client m
 		returnData.Message = result.InsertedID.(primitive.ObjectID).Hex()
 		returnData.Status = 201
 		PublishReturnMessage(returnData, "grp20/res/availabletimes/create", client)
+		PublishReturnMessage(returnData, "grp20/availabletimes/live/"+string(payload.Clinic_id.Hex()), client)
 
 		return true
 	} else {
@@ -190,7 +144,8 @@ func CreateAvailableTime(payload schemas.AvailableTime, returnData Res, client m
 			//Data not migrated successfully
 			return false
 		} else {
-			//Data migrated successfully
+			//Data migrated successfully, will get triggered when an patient cancels an appointment in appointment.go
+			PublishReturnMessage(returnData, "grp20/availabletimes/live/"+string(payload.Clinic_id.Hex()), client)
 			return true
 		}
 	}
@@ -251,7 +206,55 @@ func GetAllAvailableTimes(payload schemas.AvailableTime, returnData Res, client 
 	}
 
 	// Convert the responseMap to JSON
-    returnData.Status = 200
+	returnData.AvailableTimes = &availableTimes
+
+	PublishReturnMessage(returnData, "grp20/res/availabletimes/get", client)
+
+	return true
+}
+
+// GetClinicsAvailabletimes retrieves all available times within the specified time range and matching clinic ID
+func GetClinicsAvailabletimes(payload DentistArray, returnData Res, client mqtt.Client) bool {
+	col := getAvailableTimesCollection()
+
+	// Define the filter based on the provided criteria
+	filter := bson.M{
+		"Clinic_id":  bson.M{"$in": payload.Clinics},
+		"Start_time": bson.M{"$gte": payload.Start_time},
+		"End_time":   bson.M{"$lte": payload.End_time},
+	}
+
+	cursor, err := col.Find(context.TODO(), filter)
+	if err != nil {
+		returnData.Message = "An error occurred"
+		returnData.Status = 500
+		PublishReturnMessage(returnData, "grp20/res/availabletimes/get", client)
+		return false
+	}
+
+	defer cursor.Close(context.TODO())
+
+	var availableTimes []schemas.AvailableTime
+
+	for cursor.Next(context.TODO()) {
+		var availableTime schemas.AvailableTime
+		if err := cursor.Decode(&availableTime); err != nil {
+			returnData.Message = "An error occurred while decoding results"
+			returnData.Status = 500
+			PublishReturnMessage(returnData, "grp20/res/availabletimes/get", client)
+			return false
+		}
+		availableTimes = append(availableTimes, availableTime)
+	}
+
+	if err := cursor.Err(); err != nil {
+		returnData.Message = "An error occurred"
+		returnData.Status = 500
+		PublishReturnMessage(returnData, "grp20/res/availabletimes/get", client)
+		return false
+	}
+
+	// Convert the responseMap to JSON
 	returnData.AvailableTimes = &availableTimes
 
 	PublishReturnMessage(returnData, "grp20/res/availabletimes/get", client)
