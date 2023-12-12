@@ -28,6 +28,7 @@ func InitialiseAppointment(client mqtt.Client) {
 			//send mqtt message 400 bad request
 			fmt.Printf("400 - Bad request")
 		} else {
+            fmt.Printf("\n Recieved mqtt \n")
 			go CancelAppointment(payload.ID, returnData, client)
 		}
 	})
@@ -109,7 +110,7 @@ func DeleteAppointment(id primitive.ObjectID, returnData Res, client mqtt.Client
 		returnData.Status = 404
 	}
 
-	PublishReturnMessage(returnData, "grp20/res/dentist/delete", client)
+	PublishReturnMessage(returnData, "grp20/res/timeslots/delete", client)
 
 	returnVal = true
 	return returnVal
@@ -235,7 +236,6 @@ func CreateAppointment(payload schemas.Appointment, returnData Res, client mqtt.
 }
 
 func CancelAppointment(id primitive.ObjectID, returnData Res, client mqtt.Client) bool {
-	var returnVal bool
 	appointment := &schemas.Appointment{}
 
 	col := getAppointmentCollection()
@@ -244,6 +244,10 @@ func CancelAppointment(id primitive.ObjectID, returnData Res, client mqtt.Client
 
 	if data.Err() == mongo.ErrNoDocuments {
 		//send 404 message
+        returnData.Message = "Appointment not found"
+        returnData.Status = 404
+	    PublishReturnMessage(returnData, "grp20/res/appointment/delete", client)
+
 		return false
 	}
 
@@ -260,7 +264,7 @@ func CancelAppointment(id primitive.ObjectID, returnData Res, client mqtt.Client
 		data.Decode(appointment)
 
 		availableTime := schemas.AvailableTime{
-			Dentist_id: appointment.ID,
+			Dentist_id: appointment.Dentist_id,
 			Start_time: appointment.Start_time,
 			End_time:   appointment.End_time,
             Clinic_id: appointment.Clinic_id,
@@ -276,20 +280,16 @@ func CancelAppointment(id primitive.ObjectID, returnData Res, client mqtt.Client
 
 		client.Publish("appointmentservice/internal/migrate", 0, false, message)
 
-		returnData.Message = "Appointment Canceled"
-
-		returnVal = true
-
+        return true
 	} else {
 
 		returnData.Status = 404
 		returnData.Message = "Appointment not found"
 
-		returnVal = false
+    	PublishReturnMessage(returnData, "grp20/res/appointment/delete", client)
+        return false
 	}
 
-	PublishReturnMessage(returnData, "grp20/res/appointment/delete", client)
-	return returnVal
 }
 
 func appointmentExist(payload schemas.Appointment) bool {
