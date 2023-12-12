@@ -206,9 +206,9 @@ func GetAllAvailableTimes(payload schemas.AvailableTime, returnData Res, client 
 
 	var zeroID primitive.ObjectID
 	if payload.Dentist_id != zeroID {
-		filter = bson.D{{Key: "Dentist_id", Value: payload.Dentist_id}}
+		filter = bson.D{{Key: "dentist_id", Value: payload.Dentist_id}}
 	} else if payload.Clinic_id != zeroID {
-		filter = bson.D{{Key: "Clinic_id", Value: payload.Clinic_id}}
+		filter = bson.D{{Key: "clinic_id", Value: payload.Clinic_id}}
 	} else {
 		returnData.Message = "Bad request"
 		returnData.Status = 400
@@ -308,9 +308,9 @@ func exist(payload schemas.AvailableTime) bool {
 	col := getAvailableTimesCollection()
 
 	filter := bson.M{
-		"Dentist_id": payload.Dentist_id,
-		"Start_time": payload.Start_time,
-		"End_time":   payload.End_time,
+		"dentist_id": payload.Dentist_id,
+		"start_time": payload.Start_time,
+		"end_time":   payload.End_time,
 	}
 
 	count, err := col.CountDocuments(context.Background(), filter)
