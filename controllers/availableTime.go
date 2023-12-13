@@ -124,7 +124,6 @@ func BookAvailableTime(payload schemas.Appointment, returnData Res, client mqtt.
 
 	err := col.FindOneAndDelete(context.TODO(), filter).Decode(&deletedTime)
 	if err != nil {
-		//TODO send error message
 		returnData.Status = 404
 		returnData.Message = "Time slot not found"
 		PublishReturnMessage(returnData, "grp20/res/availabletimes/book", client)
@@ -136,7 +135,9 @@ func BookAvailableTime(payload schemas.Appointment, returnData Res, client mqtt.
 	err2 := json.Unmarshal(deletedTimeJson, &payload)
 
 	if (err1 != nil) || (err2 != nil) {
-		//TODO send mqtt error
+		returnData.Status = 500
+		returnData.Message = "Internal server error"
+		PublishReturnMessage(returnData, "grp20/res/availabletimes/book", client)
 	}
 
 	var zeroObjectID primitive.ObjectID
