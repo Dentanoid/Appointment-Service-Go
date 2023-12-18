@@ -28,7 +28,6 @@ func InitialiseAppointment(client mqtt.Client) {
 			//send mqtt message 400 bad request
 			fmt.Printf("400 - Bad request")
 		} else {
-			fmt.Printf("\n Recieved mqtt \n")
 			go CancelAppointment(payload.ID, returnData, client)
 		}
 	})
