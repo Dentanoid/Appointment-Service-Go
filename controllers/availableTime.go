@@ -148,8 +148,11 @@ func BookAvailableTime(payload schemas.Appointment, returnData Res, client mqtt.
 		result, err := col.InsertOne(context.TODO(), deletedTime)
 		_ = result
 		return err == nil
+	} else {
+		//If successfull, return an notification topic
+		PublishReturnMessage(returnData, "grp20/notification/booking"+string(payload.Clinic_id.Hex()), client)
+		return true
 	}
-	return true
 }
 
 func CreateAvailableTime(payload schemas.AvailableTime, returnData Res, client mqtt.Client, internal bool) bool {
