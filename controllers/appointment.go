@@ -28,7 +28,6 @@ func InitialiseAppointment(client mqtt.Client) {
 			//send mqtt message 400 bad request
 			fmt.Printf("400 - Bad request")
 		} else {
-            fmt.Printf("\n Recieved mqtt \n")
 			go CancelAppointment(payload.ID, returnData, client)
 		}
 	})
@@ -69,25 +68,6 @@ func InitialiseAppointment(client mqtt.Client) {
 	if tokenGetAllForUser.Error() != nil {
 		panic(tokenGetAllForUser.Error())
 	}
-
-	tokenDelete := client.Subscribe("appointmentservice/internal/delete", byte(0), func(c mqtt.Client, m mqtt.Message) {
-
-		var payload schemas.Appointment
-		var returnData Res
-
-		err1 := json.Unmarshal(m.Payload(), &payload)
-		err2 := json.Unmarshal(m.Payload(), &returnData)
-		if (err1 != nil) && (err2 != nil) {
-			//send mqtt message 400 bad request or ignore due to internal?
-			fmt.Printf("400 - Bad request")
-		} else {
-			go DeleteAppointment(payload.ID, returnData, client)
-		}
-	})
-	if tokenDelete.Error() != nil {
-		panic(tokenDelete.Error())
-	}
-
 }
 
 func DeleteAppointment(id primitive.ObjectID, returnData Res, client mqtt.Client) bool {
@@ -221,9 +201,9 @@ func CreateAppointment(payload schemas.Appointment, returnData Res, client mqtt.
 	_ = result
 
 	if err != nil {
-        returnData.Status = 500
-        returnData.Message = "Appointment could not be created"
-        PublishReturnMessage(returnData, "grp20/res/availabletimes/book", client)
+		returnData.Status = 500
+		returnData.Message = "Appointment could not be created"
+		PublishReturnMessage(returnData, "grp20/res/availabletimes/book", client)
 		return false
 	}
 
@@ -231,7 +211,7 @@ func CreateAppointment(payload schemas.Appointment, returnData Res, client mqtt.
 	returnData.Status = 200
 	returnData.Appointment = &payload
 
-    PublishReturnMessage(returnData, "grp20/res/availabletimes/book", client)
+	PublishReturnMessage(returnData, "grp20/res/availabletimes/book", client)
 	return true
 }
 
@@ -244,9 +224,9 @@ func CancelAppointment(id primitive.ObjectID, returnData Res, client mqtt.Client
 
 	if data.Err() == mongo.ErrNoDocuments {
 		//send 404 message
-        returnData.Message = "Appointment not found"
-        returnData.Status = 404
-	    PublishReturnMessage(returnData, "grp20/res/appointment/delete", client)
+		returnData.Message = "Appointment not found"
+		returnData.Status = 404
+		PublishReturnMessage(returnData, "grp20/res/appointment/delete", client)
 
 		return false
 	}
@@ -267,27 +247,22 @@ func CancelAppointment(id primitive.ObjectID, returnData Res, client mqtt.Client
 			Dentist_id: appointment.Dentist_id,
 			Start_time: appointment.Start_time,
 			End_time:   appointment.End_time,
-            Clinic_id: appointment.Clinic_id,
+			Clinic_id:  appointment.Clinic_id,
 		}
-
-		jsonData, err := json.Marshal(availableTime)
 
 		if err != nil {
 			panic(err)
 		}
 
-		message := string(jsonData)
-
-		client.Publish("appointmentservice/internal/migrate", 0, false, message)
-
-        return true
+		CreateAvailableTime(availableTime, returnData, client, true)
+		return true
 	} else {
 
 		returnData.Status = 404
 		returnData.Message = "Appointment not found"
 
-    	PublishReturnMessage(returnData, "grp20/res/appointment/delete", client)
-        return false
+		PublishReturnMessage(returnData, "grp20/res/appointment/delete", client)
+		return false
 	}
 
 }
