@@ -150,6 +150,9 @@ func BookAvailableTime(payload schemas.Appointment, returnData Res, client mqtt.
 		return err == nil
 	} else {
 		//If successfull, return an notification topic
+		returnData.Appointment.Dentist_id = payload.Dentist_id
+		returnData.Appointment.Patient_id = payload.Patient_id
+		returnData.Appointment.Clinic_id = payload.Clinic_id
 		PublishReturnMessage(returnData, "grp20/notification/booking"+string(payload.Clinic_id.Hex()), client)
 		return true
 	}

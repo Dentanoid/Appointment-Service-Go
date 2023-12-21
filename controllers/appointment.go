@@ -28,7 +28,7 @@ func InitialiseAppointment(client mqtt.Client) {
 			//send mqtt message 400 bad request
 			fmt.Printf("400 - Bad request")
 		} else {
-            fmt.Printf("\n Recieved mqtt \n")
+			fmt.Printf("\n Recieved mqtt \n")
 			go CancelAppointment(payload.ID, returnData, client)
 		}
 	})
@@ -221,9 +221,9 @@ func CreateAppointment(payload schemas.Appointment, returnData Res, client mqtt.
 	_ = result
 
 	if err != nil {
-        returnData.Status = 500
-        returnData.Message = "Appointment could not be created"
-        PublishReturnMessage(returnData, "grp20/res/availabletimes/book", client)
+		returnData.Status = 500
+		returnData.Message = "Appointment could not be created"
+		PublishReturnMessage(returnData, "grp20/res/availabletimes/book", client)
 		return false
 	}
 
@@ -231,7 +231,7 @@ func CreateAppointment(payload schemas.Appointment, returnData Res, client mqtt.
 	returnData.Status = 200
 	returnData.Appointment = &payload
 
-    PublishReturnMessage(returnData, "grp20/res/availabletimes/book", client)
+	PublishReturnMessage(returnData, "grp20/res/availabletimes/book", client)
 	return true
 }
 
@@ -244,9 +244,9 @@ func CancelAppointment(id primitive.ObjectID, returnData Res, client mqtt.Client
 
 	if data.Err() == mongo.ErrNoDocuments {
 		//send 404 message
-        returnData.Message = "Appointment not found"
-        returnData.Status = 404
-	    PublishReturnMessage(returnData, "grp20/res/appointment/delete", client)
+		returnData.Message = "Appointment not found"
+		returnData.Status = 404
+		PublishReturnMessage(returnData, "grp20/res/appointment/delete", client)
 
 		return false
 	}
@@ -267,7 +267,7 @@ func CancelAppointment(id primitive.ObjectID, returnData Res, client mqtt.Client
 			Dentist_id: appointment.Dentist_id,
 			Start_time: appointment.Start_time,
 			End_time:   appointment.End_time,
-            Clinic_id: appointment.Clinic_id,
+			Clinic_id:  appointment.Clinic_id,
 		}
 
 		jsonData, err := json.Marshal(availableTime)
@@ -280,14 +280,18 @@ func CancelAppointment(id primitive.ObjectID, returnData Res, client mqtt.Client
 
 		client.Publish("appointmentservice/internal/migrate", 0, false, message)
 
-        return true
+		returnData.Appointment.Clinic_id = availableTime.Clinic_id
+		returnData.Appointment.Dentist_id = availableTime.Dentist_id
+		PublishReturnMessage(returnData, "grp20/notification/booking"+string(availableTime.Clinic_id.Hex()), client)
+
+		return true
 	} else {
 
 		returnData.Status = 404
 		returnData.Message = "Appointment not found"
 
-    	PublishReturnMessage(returnData, "grp20/res/appointment/delete", client)
-        return false
+		PublishReturnMessage(returnData, "grp20/res/appointment/delete", client)
+		return false
 	}
 
 }
