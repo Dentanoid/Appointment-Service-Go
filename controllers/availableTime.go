@@ -153,6 +153,8 @@ func BookAvailableTime(payload schemas.Appointment, returnData Res, client mqtt.
 		returnData.Appointment.Dentist_id = payload.Dentist_id
 		returnData.Appointment.Patient_id = payload.Patient_id
 		returnData.Appointment.Clinic_id = payload.Clinic_id
+		returnData.Appointment.Start_time = payload.Start_time
+		returnData.Appointment.End_time = payload.End_time
 		PublishReturnMessage(returnData, "grp20/notification/booking"+string(payload.Clinic_id.Hex()), client)
 		return true
 	}
