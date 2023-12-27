@@ -123,8 +123,8 @@ func BookAvailableTime(payload schemas.Appointment, returnData Res, client mqtt.
 		PublishReturnMessage(returnData, "grp20/res/availabletimes/book", client)
 	}
 
-	var zeroObjectID primitive.ObjectID
-	payload.ID = zeroObjectID
+	// var zeroObjectID primitive.ObjectID
+	// payload.ID = zeroObjectID
 
 	// Reinsert if creation of appointment is unsuccessfull
 	if !CreateAppointment(payload, returnData, client) {

@@ -50,7 +50,7 @@ func PublishReturnMessage(returnData Res, topic string, client mqtt.Client) {
 	}
 
 	returnString := string(returnJson)
-	fmt.Printf(returnString)
+	fmt.Println(returnString)
 
 	client.Publish(topic, 0, false, returnString)
 }
