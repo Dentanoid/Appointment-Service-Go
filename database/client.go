@@ -13,9 +13,9 @@ var Database *mongo.Database
 
 func Connect() {
 	c, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(os.Getenv("MONGO_URI")))
-	Database = c.Database("AppointmentService")
 	if err != nil {
 		panic(err)
 	}
+	Database = c.Database("AppointmentService")
 	fmt.Println("App is connected to MongoDB")
 }

@@ -72,7 +72,6 @@ func InitialiseAppointment(client mqtt.Client) {
 
 func DeleteAppointment(id primitive.ObjectID, returnData Res, client mqtt.Client) bool {
 	var returnVal bool
-
 	col := getAppointmentCollection()
 	filter := bson.M{"_id": id}
 	result, err := col.DeleteOne(context.TODO(), filter)
@@ -244,6 +243,7 @@ func CancelAppointment(id primitive.ObjectID, returnData Res, client mqtt.Client
 		data.Decode(appointment)
 
 		availableTime := schemas.AvailableTime{
+            ID: appointment.ID,
 			Dentist_id: appointment.Dentist_id,
 			Start_time: appointment.Start_time,
 			End_time:   appointment.End_time,
