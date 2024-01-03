@@ -14,7 +14,6 @@ var Database *mongo.Database
 func Connect() {
 	c, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(os.Getenv("MONGO_URI")))
 	if err != nil {
-        fmt.Println("Here error")
 		panic(err)
 	}
 	Database = c.Database("AppointmentService")
