@@ -28,7 +28,6 @@ func InitialiseAppointment(client mqtt.Client) {
 			//send mqtt message 400 bad request
 			fmt.Printf("400 - Bad request")
 		} else {
-			fmt.Printf("\n Recieved mqtt \n")
 			go CancelAppointment(payload.ID, returnData, client)
 		}
 	})
@@ -69,30 +68,10 @@ func InitialiseAppointment(client mqtt.Client) {
 	if tokenGetAllForUser.Error() != nil {
 		panic(tokenGetAllForUser.Error())
 	}
-
-	tokenDelete := client.Subscribe("appointmentservice/internal/delete", byte(0), func(c mqtt.Client, m mqtt.Message) {
-
-		var payload schemas.Appointment
-		var returnData Res
-
-		err1 := json.Unmarshal(m.Payload(), &payload)
-		err2 := json.Unmarshal(m.Payload(), &returnData)
-		if (err1 != nil) && (err2 != nil) {
-			//send mqtt message 400 bad request or ignore due to internal?
-			fmt.Printf("400 - Bad request")
-		} else {
-			go DeleteAppointment(payload.ID, returnData, client)
-		}
-	})
-	if tokenDelete.Error() != nil {
-		panic(tokenDelete.Error())
-	}
-
 }
 
 func DeleteAppointment(id primitive.ObjectID, returnData Res, client mqtt.Client) bool {
 	var returnVal bool
-
 	col := getAppointmentCollection()
 	filter := bson.M{"_id": id}
 	result, err := col.DeleteOne(context.TODO(), filter)
@@ -266,21 +245,14 @@ func CancelAppointment(id primitive.ObjectID, returnData Res, client mqtt.Client
 		data.Decode(appointment)
 
 		availableTime := schemas.AvailableTime{
+			ID:         appointment.ID,
 			Dentist_id: appointment.Dentist_id,
 			Start_time: appointment.Start_time,
 			End_time:   appointment.End_time,
 			Clinic_id:  appointment.Clinic_id,
 		}
+		CreateAvailableTime(availableTime, returnData, client, true)
 
-		jsonData, err := json.Marshal(&availableTime)
-
-		if err != nil {
-			panic(err)
-		}
-
-		message := string(jsonData)
-
-		client.Publish("appointmentservice/internal/migrate", 0, false, message)
 		appointment.ID = zeroID
 		returnData.Appointment = appointment
 		PublishReturnMessage(returnData, "grp20/req/booking/cancellation/"+string(availableTime.Clinic_id.Hex()), client)

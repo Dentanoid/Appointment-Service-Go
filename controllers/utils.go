@@ -26,22 +26,6 @@ type DentistArray struct {
 	End_time   primitive.DateTime   `json:"end_time,omitempty"`
 }
 
-// Adds mqtt code to stringified json
-func AddCodeStringJson(json string, code string) string {
-	var newJson string
-	length := len(json)
-	index := 0
-
-	runes := []rune(json)
-
-	for index >= 0 && index < (length-1) {
-		newJson = newJson + string(runes[index])
-		index++
-	}
-	newJson = newJson + ",\"Code\": \"" + code + "\"}"
-	return newJson
-}
-
 func PublishReturnMessage(returnData Res, topic string, client mqtt.Client) {
 
 	returnJson, err := json.Marshal(returnData)
@@ -50,7 +34,7 @@ func PublishReturnMessage(returnData Res, topic string, client mqtt.Client) {
 	}
 
 	returnString := string(returnJson)
-	fmt.Printf(returnString)
+	fmt.Println(returnString)
 
 	client.Publish(topic, 0, false, returnString)
 }

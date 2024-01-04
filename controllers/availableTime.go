@@ -80,23 +80,6 @@ func InitializeAvailableTimes(client mqtt.Client) {
 		panic(tokenCreate.Error())
 	}
 
-	tokenInternalMigrate := client.Subscribe("appointmentservice/internal/migrate", byte(0), func(c mqtt.Client, m mqtt.Message) {
-		var payload schemas.AvailableTime
-		var returnData Res
-
-		err1 := json.Unmarshal(m.Payload(), &payload)
-		err2 := json.Unmarshal(m.Payload(), &returnData)
-		if (err1 != nil) && (err2 != nil) {
-			fmt.Printf("malformed payload!")
-		} else {
-			go CreateAvailableTime(payload, returnData, client, true)
-		}
-	})
-
-	if tokenInternalMigrate.Error() != nil {
-		panic(tokenInternalMigrate.Error())
-	}
-
 	tokenBookAvailableTime := client.Subscribe("grp20/req/availabletimes/book", byte(0), func(c mqtt.Client, m mqtt.Message) {
 		var payload schemas.Appointment
 		var returnData Res
@@ -148,8 +131,8 @@ func BookAvailableTime(payload schemas.Appointment, returnData Res, client mqtt.
 		PublishReturnMessage(returnData, "grp20/res/availabletimes/book", client)
 	}
 
-	var zeroObjectID primitive.ObjectID
-	payload.ID = zeroObjectID
+	// var zeroObjectID primitive.ObjectID
+	// payload.ID = zeroObjectID
 
 	// Reinsert if creation of appointment is unsuccessfull
 	if !CreateAppointment(payload, returnData, client) {
@@ -358,12 +341,7 @@ func DeleteAvailableTime(ID primitive.ObjectID, returnData Res, client mqtt.Clie
 		return false
 	}
 
-	msg := schemas.AvailableTime{
-		ID: ID,
-	}
-
 	if result.DeletedCount != 1 {
-		document, err := json.Marshal(msg)
 
 		if err != nil {
 
@@ -373,8 +351,8 @@ func DeleteAvailableTime(ID primitive.ObjectID, returnData Res, client mqtt.Clie
 
 			return false
 		}
-
-		client.Publish("appointmentservice/internal/delete", 0, false, document)
+		//if no availabletime is found for _id, check in appointments collection
+		DeleteAppointment(ID, returnData, client)
 
 		return false
 	} else {
