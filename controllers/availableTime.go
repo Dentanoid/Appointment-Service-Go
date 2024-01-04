@@ -107,6 +107,14 @@ func BookAvailableTime(payload schemas.Appointment, returnData Res, client mqtt.
 
 	err := col.FindOneAndDelete(context.TODO(), filter).Decode(&deletedTime)
 	if err != nil {
+		returnData.Status = 500
+		returnData.Message = "Internal server error"
+		PublishReturnMessage(returnData, "grp20/res/availabletimes/book", client)
+		return false
+	}
+
+	//if no document is found, deletedTime.ID will have an null (zero valued) _id
+	if len(deletedTime.ID) == 0 {
 		returnData.Status = 404
 		returnData.Message = "Time slot not found"
 		PublishReturnMessage(returnData, "grp20/res/availabletimes/book", client)
@@ -131,8 +139,14 @@ func BookAvailableTime(payload schemas.Appointment, returnData Res, client mqtt.
 		result, err := col.InsertOne(context.TODO(), deletedTime)
 		_ = result
 		return err == nil
+	} else {
+		//If successfull, return an notification topic
+		fmt.Println(payload)
+		returnData.Appointment = &payload
+
+		PublishReturnMessage(returnData, "grp20/req/booking/confirmation/"+string(payload.Clinic_id.Hex()), client)
+		return true
 	}
-	return true
 }
 
 func CreateAvailableTime(payload schemas.AvailableTime, returnData Res, client mqtt.Client, internal bool) bool {

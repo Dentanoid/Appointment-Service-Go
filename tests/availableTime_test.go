@@ -29,49 +29,49 @@ func TestMain(m *testing.M) {
 }
 
 func TestAvailableTime(t *testing.T) {
-    timeSlot := schemas.AvailableTime{
-        ID: primitive.NewObjectID(),
-        Dentist_id: primitive.NewObjectID(),
-        Start_time: primitive.DateTime(1704110400000),
-        End_time: primitive.DateTime(1704114000000),
-        Clinic_id: primitive.NewObjectID(),
-    }
-    var res controllers.Res
-    
-    result := controllers.CreateAvailableTime(timeSlot, res, client, false)
-    if !result {
-        t.Error("Error creating available time")
-    }
+	timeSlot := schemas.AvailableTime{
+		ID:         primitive.NewObjectID(),
+		Dentist_id: primitive.NewObjectID(),
+		Start_time: primitive.DateTime(1704110400000),
+		End_time:   primitive.DateTime(1704114000000),
+		Clinic_id:  primitive.NewObjectID(),
+	}
+	var res controllers.Res
 
-    searchByDentist := schemas.AvailableTime{
-        Dentist_id: timeSlot.Dentist_id,
-    }
-    result = controllers.GetAllAvailableTimes(searchByDentist, res, client)
-    if !result {
-        t.Error("Error finding available time by dentist")
-    }
+	result := controllers.CreateAvailableTime(timeSlot, res, client, false)
+	if !result {
+		t.Error("Error creating available time")
+	}
 
-    searchByClinic := schemas.AvailableTime{
-        Clinic_id: timeSlot.Clinic_id,
-    }
-    result = controllers.GetAllAvailableTimes(searchByClinic, res, client)
-    if !result {
-        t.Error("Error finding available time by clinic")
-    }
+	searchByDentist := schemas.AvailableTime{
+		Dentist_id: timeSlot.Dentist_id,
+	}
+	result = controllers.GetAllAvailableTimes(searchByDentist, res, client)
+	if !result {
+		t.Error("Error finding available time by dentist")
+	}
 
-    dentistArray := controllers.DentistArray{
-        Clinics: []primitive.ObjectID{timeSlot.Clinic_id},
-        Start_time: timeSlot.Start_time,
-        End_time: timeSlot.End_time,
-    }
-    result = controllers.GetClinicsAvailabletimes(dentistArray, res, client)
-    if !result {
-        t.Error("Error finding available time by multiple clinics and time window")
-    }
+	searchByClinic := schemas.AvailableTime{
+		Clinic_id: timeSlot.Clinic_id,
+	}
+	result = controllers.GetAllAvailableTimes(searchByClinic, res, client)
+	if !result {
+		t.Error("Error finding available time by clinic")
+	}
 
-    result = controllers.DeleteAvailableTime(timeSlot.ID, res, client)
-    if !result {
-        t.Error("Error deleting available time")
-    }
+	dentistArray := controllers.DentistArray{
+		Clinics:    []primitive.ObjectID{timeSlot.Clinic_id},
+		Start_time: timeSlot.Start_time,
+		End_time:   timeSlot.End_time,
+	}
+	result = controllers.GetClinicsAvailabletimes(dentistArray, res, client)
+	if !result {
+		t.Error("Error finding available time by multiple clinics and time window")
+	}
+
+	result = controllers.DeleteAvailableTime(timeSlot.ID, res, client)
+	if !result {
+		t.Error("Error deleting available time")
+	}
 
 }
