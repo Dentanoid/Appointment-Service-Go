@@ -144,7 +144,7 @@ func BookAvailableTime(payload schemas.Appointment, returnData Res, client mqtt.
 		fmt.Println(payload)
 		returnData.Appointment = &payload
 
-		PublishReturnMessage(returnData, "grp20/req/booking/confirmation"+string(payload.Clinic_id.Hex()), client)
+		PublishReturnMessage(returnData, "grp20/req/booking/confirmation/"+string(payload.Clinic_id.Hex()), client)
 		return true
 	}
 }
