@@ -42,6 +42,15 @@ func getOptions() *mqtt.ClientOptions {
 	return opts
 }
 
+func Close() {
+    if mqtt_client != nil{
+        mqtt_client.Disconnect(250) 
+        fmt.Println("")
+        fmt.Println("MQTT connection closed")
+    }
+
+}
+
 var messagePubHandler mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
 	fmt.Printf("Received message: %s from topic: %s\n", msg.Payload(), msg.Topic())
 }
