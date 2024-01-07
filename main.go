@@ -1,8 +1,8 @@
 package main
 
 import (
-	"Group20/appointment-service/mqtt"
 	"Group20/appointment-service/database"
+	"Group20/appointment-service/mqtt"
 	"log"
 	"os"
 	"os/signal"
@@ -12,6 +12,7 @@ import (
 )
 
 func main() {
+
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -25,8 +26,10 @@ func main() {
 	database.Connect()
 
 	// Connect to MQTT
-	mqtt.GetInstance()
+    mqtt.GetInstance()
 
+    defer database.Close()
+    defer mqtt.Close()
 
 	<-c
 	// Variant #1 MQTT
