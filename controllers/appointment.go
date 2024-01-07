@@ -255,6 +255,7 @@ func CancelAppointment(id primitive.ObjectID, returnData Res, client mqtt.Client
 
 		appointment.ID = zeroID
 		returnData.Appointment = appointment
+		PublishReturnMessage(returnData, "grp20/req/booking/cancellation", client)
 		PublishReturnMessage(returnData, "grp20/req/booking/cancellation/"+string(availableTime.Clinic_id.Hex()), client)
 
 		return true
