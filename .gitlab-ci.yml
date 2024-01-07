@@ -11,6 +11,8 @@ image: golang:latest
 stages:
   - build
   - test
+  - build-docker-image
+  - deploy
 
 compile:
   stage: build
@@ -29,3 +31,48 @@ test:
     - docker
   script:
     - go test ./... -v
+
+build-docker-image:
+  stage: build-docker-image
+  image: docker:latest
+  tags: 
+    - docker-build
+  only:
+    - main
+  services:
+    - docker:dind
+  variables:  # not strictly needed, depending on runner configuration
+    DOCKER_HOST: "tcp://docker:2375"
+    DOCKER_TLS_CERTDIR: ""
+
+    IMAGE_NAME: "user-service:x86"
+    AZURE_REGISTRY_USERNAME: $CI_REGISTRY_USER
+    AZURE_REGISTRY_PASSWORD: $CI_REGISTRY_PASSWORD
+    AZURE_REGISTRY: dentanoidregistry.azurecr.io
+
+  script:
+    - touch .env
+    - echo -e "MONGO_URI = $MONGO_URI \n" >> .env
+    - echo "BROKER_URL = $BROKER_URL" >> .env
+    - docker context ls
+    - docker info
+    - docker buildx create --use
+    - docker buildx build --platform linux/amd64 -t $IMAGE_NAME . --load
+    - docker tag $IMAGE_NAME $AZURE_REGISTRY/services/appointment
+    - docker login $AZURE_REGISTRY -u $AZURE_REGISTRY_USERNAME -p $AZURE_REGISTRY_PASSWORD
+    - docker push $AZURE_REGISTRY/services/appointment
+    - docker images
+
+deploy:
+  stage: deploy
+  tags:
+    - docker
+  only:
+    - main
+  image:
+    name: mcr.microsoft.com/azure-cli
+    entrypoint: [""]
+  script:
+    - az login --service-principal -u "$AZURE_CLIENT_ID" -p "$AZURE_CLIENT_SECRET" --tenant "$AZURE_TENANT_ID"
+    - az container delete --name appointment-service --resource-group Dentanoid --yes
+    - az container create --resource-group Dentanoid --name appointment-service --image dentanoidRegistry.azurecr.io/services/appointment:latest --registry-username "$CI_REGISTRY_USER" --registry-password "$CI_REGISTRY_PASSWORD" --restart-policy Always
