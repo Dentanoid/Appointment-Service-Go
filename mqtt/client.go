@@ -8,6 +8,7 @@ import (
 	"os"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/google/uuid"
 )
 
 var mqtt_client mqtt.Client
@@ -33,9 +34,9 @@ func getOptions() *mqtt.ClientOptions {
 	}
 	var opts = mqtt.NewClientOptions()
 	opts.AddBroker(fmt.Sprintf("tcp://%s", url))
-	opts.SetClientID("go_mqh2eu1h2ieh12iuett_client")
-	opts.SetUsername("")
-	opts.SetPassword("")
+	opts.SetClientID(uuid.NewString())
+	opts.SetUsername("dentanoid")
+	opts.SetPassword("dentanoid123")
 	opts.SetDefaultPublishHandler(messagePubHandler)
 	opts.OnConnect = connectHandler
 	opts.OnConnectionLost = connectLostHandler
