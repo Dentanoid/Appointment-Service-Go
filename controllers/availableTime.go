@@ -180,13 +180,13 @@ func CreateAvailableTime(payload schemas.AvailableTime, returnData Res, client m
 
 	if internal == false {
 		if err != nil {
-			log.Fatal(err)
 
 			returnData.Message = "An error occurred"
 			returnData.Status = 500
 			PublishReturnMessage(returnData, "grp20/res/availabletimes/create", client)
-
+			log.Fatal(err)
 			return false
+
 		}
 
 		fmt.Printf("Registered availableTime with dentistID: %v \n", result.InsertedID)
@@ -203,7 +203,7 @@ func CreateAvailableTime(payload schemas.AvailableTime, returnData Res, client m
 			//Data not migrated successfully
 			return false
 		} else {
-			//Data migrated successfully, will get triggered when an patient cancels an appointment in appointment.go
+			//Data migrated successfully, will get triggered when a patient cancels an appointment in appointment.go
 			returnData.Message = "An appointment has been canceled"
 			returnData.Status = 201
 			PublishReturnMessage(returnData, "grp20/res/appointment/delete", client)
@@ -213,7 +213,7 @@ func CreateAvailableTime(payload schemas.AvailableTime, returnData Res, client m
 	}
 }
 
-// getAllInstancesWithDentistID retrieves all documents in a collection with a matching dentist_id
+// GetAllAvailableTimes getAllInstancesWithDentistID retrieves all documents in a collection with a matching dentist_id
 func GetAllAvailableTimes(payload schemas.AvailableTime, returnData Res, client mqtt.Client) bool {
 
 	var filter bson.D
@@ -225,10 +225,7 @@ func GetAllAvailableTimes(payload schemas.AvailableTime, returnData Res, client 
 	} else if payload.Clinic_id != zeroID {
 		filter = bson.D{{Key: "clinic_id", Value: payload.Clinic_id}}
 	} else {
-		returnData.Message = "Bad request"
-		returnData.Status = 400
-		PublishReturnMessage(returnData, "grp20/res/availabletimes/get", client)
-		return false
+		filter = bson.D{{}}
 	}
 
 	cursor, err := col.Find(context.TODO(), filter)
