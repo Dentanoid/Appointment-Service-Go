@@ -176,7 +176,17 @@ func CreateAvailableTime(payload schemas.AvailableTime, returnData Res, client m
 
 	col := getAvailableTimesCollection()
 
+
 	result, err := col.InsertOne(context.TODO(), payload)
+
+    insertedId, ok := result.InsertedID.(primitive.ObjectID)
+    if !ok{
+        fmt.Println("Could not get ID")
+    }
+
+    payload.ID = insertedId
+
+    returnData.AvailableTime = &payload
 
 	if internal == false {
 		if err != nil {
